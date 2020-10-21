@@ -9,10 +9,6 @@ const movies = [
 ];
 
 
-
-router.get('/movies/create', function (req, res){
-    res.send("create")
-    });
         
 router.get('/movies/read', function (req, res){
         res.send({
@@ -62,6 +58,33 @@ router.get('/movies/read/id/:id', function (req, res){
         })
     }
 })
+
+router.get('/movies/create', function (req, res){
+
+        console.log((req.query.year));
+      
+      if (!(req.query).hasOwnProperty('title') || !(req.query).hasOwnProperty('year')
+      || !Number.isInteger(Number(req.query.year)) || (req.query.year).length != 4 ) {
+            res.send({
+                status:500,
+                error:true,
+                message:"you cannot create a movie without providing a title and a year'"
+                });
+      }else if (req.query.rating == undefined || req.query.rating > 9.9 ){
+          movies.push({id:movies.length+1, title: req.query.title, year: req.query.year, rating: 4})
+          res.send({
+              status:200,
+              message: movies
+          })
+      }else {
+        movies.push({id:movies.length+1, title: req.query.title, year: req.query.year, rating: Number(Number((req.query.rating)).toFixed(1))})
+        res.send({
+            status:200,
+            message: movies
+        })
+      }
+
+     });
 
 router.get('/movies/update', function (req, res){
     res.send("update")
