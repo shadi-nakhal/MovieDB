@@ -1,56 +1,24 @@
-const express = require('express')
+const express = require('express');
+const movies_router = require('./routes/movies');
+const fun_stuff = require('./routes/fun_stuff');
+const search = require('./routes/search');
 const app = express()
 const port = 3001
+
+const movies = [
+    { title: 'Jaws', year: 1975, rating: 8 },
+    { title: 'Avatar', year: 2009, rating: 7.8 },
+    { title: 'Brazil', year: 1985, rating: 8 },
+    { title: 'الإرهاب والكباب‎', year: 1992, rating: 6.2 }
+];
 
 app.get('/', (req, res) => {
   res.send('ok')
 });
 
-app.get('/test', (req, res) => {
-    res.send({
-        status:200,
-        message:"ok"
-    })
-    });
-  
-app.get('/time', (req, res) => {
-    let t = new Date();
-    let time = t.getHours()+ ":" + (t.getSeconds() < 10 ? '0' : '') + t.getSeconds() ;
-    res.send({
-        status:200,
-         message:time
-    })
-    });
-
-app.get('/hello/', function (req, res) {
-    res.send({
-        status:200,
-        message:"hello"
-    })
-    });    
-
-app.get('/hello/:id', function (req, res) {
-    res.send({
-        status:200,
-        message:"hello "+ req.params.id
-    })
-    });
-
-app.get('/search', function (req, res) {
-    if (Object.keys(req.query).length == 0){
-        res.send({
-            status:500,
-            error:true,
-            message:"you have to provide a search"
-        });
-}else {
-    res.send({
-        status:200,
-        message:"ok",
-        data: req.query
-    });
-}
-    });
+app.use(movies_router);
+app.use(fun_stuff);
+app.use(search);
 
 
 app.listen(port, () => {
