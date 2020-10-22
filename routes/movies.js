@@ -1,4 +1,5 @@
 const express = require('express');
+const { stringify } = require('querystring');
 const router = express.Router();
 
 const movies = [
@@ -60,9 +61,7 @@ router.get('/movies/read/id/:id', function (req, res){
 })
 
 router.get('/movies/create', function (req, res){
-
-        console.log((req.query.year));
-      
+  
       if (!(req.query).hasOwnProperty('title') || !(req.query).hasOwnProperty('year')
       || !Number.isInteger(Number(req.query.year)) || (req.query.year).length != 4 ) {
             res.send({
@@ -86,12 +85,36 @@ router.get('/movies/create', function (req, res){
 
      });
 
+router.get('/movies/delete', function (req, res){
+    res.send({
+        status:404,
+        error:true,
+        message:"Cannot Delete without a movie ID"
+    })
+    });
+
+router.get('/movies/delete/:id', function (req, res){
+    let mov = movies.filter(item => Object.values(item).indexOf(Number(req.params.id)) == 0);
+    
+    if(mov.length != 0){
+        movies.splice((movies.indexOf(...mov)), 1)
+        res.send({
+            status:200,
+            message: movies
+        });
+        
+    }else{
+        res.send({
+            status:404,
+            error:true,
+            message:"the movie with id " + req.params.id + " does not exist"
+        })
+    }
+
+    });
+
 router.get('/movies/update', function (req, res){
     res.send("update")
-    });
-        
-router.get('/movies/delete', function (req, res){
-    res.send("delete")
     });
 
 
