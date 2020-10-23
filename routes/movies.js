@@ -1,22 +1,17 @@
 const { query } = require('express');
 const express = require('express');
 const router = express.Router();
-const movie = require('../movies_database')
-
-const movies = [
-    { id: 1, title: 'Jaws', year: 1975, rating: 8 },
-    { id: 2, title: 'Avatar', year: 2009, rating: 7.8 },
-    { id: 3, title: 'Brazil', year: 1985, rating: 8 },
-    { id: 4, title: 'الإرهاب والكباب‎', year: 1992, rating: 6.2 }
-];
-
+const movie = require('../movies_database');
+const { checkout } = require('./fun_stuff');
 
         
 router.get('/movies/read', function (req, res){
+    movie.find({}).sort({title: 1}).exec(function(err, mov) {
         res.send({
         status:200,
-        message: movies
+        message: mov
         })
+    })
     });
 /*
 * read sorted example localhost:3001/movies/read/by-date or by-title or by-rating
@@ -24,25 +19,27 @@ router.get('/movies/read', function (req, res){
 router.get('/movies/read/:sort', function (req, res){
     
     if(req.params.sort == "by-date"){
+        movie.find({}).sort({year: 'desc'}).exec(function(err, mov) {
             res.send({
-            status:200,
-            data: movies.sort((a, b)=>{var dateA = new Date(a.year), dateB = new Date(b.year); return dateA - dateB;})
-        })
-    }else if(req.params.sort == "by-rating"){
-            res.send({
-            status:200,
-            data: movies.sort((a, b) => a.rating - b.rating)
-        })
-    }else if(req.params.sort == "by-title"){
-            res.send({
-            status:200,
-            data: movies.sort((a, b)=>{
-                var titleA = a.title.toLowerCase(), titleB = b.title.toLowerCase();
-                if (titleA < titleB) return -1;
-                if (titleA > titleB) return 1;
-                return 0;
+                status:200,
+                data: mov
             })
-        })
+         })
+        
+    }else if(req.params.sort == "by-rating"){
+        movie.find({}).sort({rating: 'desc'}).exec(function(err, mov) {
+            res.send({
+                status:200,
+                data: mov
+            })
+         })
+    }else if(req.params.sort == "by-title"){
+        movie.find({}).sort({title: 1}).exec(function(err, mov) {
+            res.send({
+                status:200,
+                data: mov
+            })
+         })
     }else {
         res.send({
             status:404,
@@ -57,55 +54,91 @@ router.get('/movies/read/:sort', function (req, res){
 * read example localhost:3001/movies/read/id/1
 */
 router.get('/movies/read/id/:id', function (req, res){
-    let mov = movies.filter(item => Object.values(item).indexOf(Number(req.params.id)) == 0)
-    if(mov.length != 0){
+    movie.findById({_id: req.params.id}).then(function(mov){
         res.send({
             status:200,
             data:mov
         })
-    }else{
-        res.send({
-            status:404,
-            error:true,
-            message:"the movie with id " + req.params.id + " does not exist"
-        })
-    }
+    }).catch((err) => res.send({
+        status:404,
+        error:true,
+        error2:err,
+        message: "no movie with such ID"
+    }));
 })
 
 /*
 * adding example localhost:3001/movies/add/?title=batata&year=2100&rating=9
 */
 router.post('/movies/add', function (req, res){
-      if (!(req.query).hasOwnProperty('title') || !(req.query).hasOwnProperty('year')
-      || !Number.isInteger(Number(req.query.year)) || (req.query.year).length != 4 ) {
-            res.send({
-                status:500,
-                error:true,
-                message:"you cannot create a movie without providing a title and a year'"
-                });
-      }else if (req.query.rating == undefined || req.query.rating > 9.9 ){
+    let querry = req.query; 
+    let check = {};
+
+    function check_data(data){
+        if((data).hasOwnProperty('title') || (data).hasOwnProperty('year') || (data).hasOwnProperty('rating')){
+            if((data).hasOwnProperty('title') && data.title != ""){
+                check.title = true
+            }else if(data.title == ""){
+                check.title = false
+            }else {
+                delete check.title
+            }
+            if ((data).hasOwnProperty('year') && Number.isInteger(Number(data.year)) && (data.year).length == 4){
+                check.year = true
+            }else if((data).hasOwnProperty('year') && (data.year).length != 4){
+                check.year = false
+            }
+            if((data).hasOwnProperty('rating') && data.rating < 9.99 && data.rating > 0){
+                check.rating = true
+            }else if(data.rating > 9.99 || data.rating < 0){
+                check.rating = false
+            }
+        }
+    }
+
+    check_data(querry)
+
+    if (Object.values(check).indexOf(false) > -1) {
+        let error = Object.keys(check).find(key => check[key] === false)
+        res.send({
+            status:404,
+            error:true,
+            message:"invalid " + error + " Input",
+        })
+    }
+      if (req.query.rating == undefined || req.query.rating > 9.9 ){
           let newmovie = { title: req.query.title, year: req.query.year, rating: 4}
-          movie.create(newmovie).then(function(add_movie){
+          movie.create(newmovie).then(function(){
             movie.find({}).then(function(allmovies){
                 res.send({
                     status:200,
-                    added_movie: add_movie,
                     movies_list : allmovies
                 })
             })
-          })
+          }).catch((err) => res.send({
+            status:404,
+            error:true,
+            message: err
+        }))
 
       }else {
         let newmovie = {title: req.query.title, year: req.query.year, rating: Number(Number((req.query.rating)).toFixed(1))}
-          movie.create(newmovie).then(function(add_movie){
+          movie.create(newmovie).then(function(){
             movie.find({}).then(function(allmovies){
                 res.send({
                     status:200,
-                    added_movie: add_movie,
                     movies_list : allmovies
                 })
-            })
-          })
+            }).catch((err) => res.send({
+                status:404,
+                error:true,
+                message: err
+            }))
+          }).catch((err) => res.send({
+            status:404,
+            error:true,
+            message: err
+        }))
       }
       
      });
@@ -123,19 +156,23 @@ router.delete('/movies/delete', function (req, res){
 * delete example localhost:3001/movies/delete/1
 */
 router.delete('/movies/delete/:id', function (req, res){
-       movie.findByIdAndRemove({_id: req.params.id}).then(function(deleted){
+       movie.findByIdAndRemove({_id: req.params.id}).then(function(){
            movie.find({}).then(function(allmovies){
                res.send({
                    status:200,
-                   deleted_movie: deleted,
                    movies_list : allmovies
                })
-           }).catch(res.send({
+           }).catch((err) => res.send({
                     status:404,
                     error:true,
-                    message:"the movie with id "+ req.params.id + " does not exist"
+                    message:err
                 }))
-       })
+       }).catch((err) => res.send({
+        status:404,
+        error:true,
+        error2: err,
+        message:"the movie with id "+ req.params.id + " does not exist"
+    }))
 
 
     });
@@ -152,35 +189,33 @@ router.put('/movies/update', function (req, res){
 /*
 * update example localhost:3001/movies/update/1/?title=blabla&year=2000
 */
-router.patch('/movies/update/:id', function (req, res){
+router.put('/movies/update/:id', function (req, res){
     let check = {};
+    let querry = req.query;
 
     function check_data(data){
-        if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating')){
-            if((querry).hasOwnProperty('title') && querry.title != ""){
+        if((data).hasOwnProperty('title') || (data).hasOwnProperty('year') || (data).hasOwnProperty('rating')){
+            if((data).hasOwnProperty('title') && data.title != ""){
                 check.title = true
-            }else if(querry.title == ""){
+            }else if(data.title == ""){
                 check.title = false
             }else {
                 delete check.title
             }
-            if ((querry).hasOwnProperty('year') && Number.isInteger(Number(querry.year)) && (querry.year).length == 4){
+            if ((data).hasOwnProperty('year') && Number.isInteger(Number(data.year)) && (data.year).length == 4){
                 check.year = true
-            }else if((querry).hasOwnProperty('year') && (querry.year).length != 4){
+            }else if((data).hasOwnProperty('year') && (data.year).length != 4){
                 check.year = false
             }
-            if((querry).hasOwnProperty('rating') && querry.rating < 9.99 && querry.rating > 0){
+            if((data).hasOwnProperty('rating') && data.rating < 9.99 && data.rating > 0){
                 check.rating = true
-            }else if(querry.rating > 9.99 || querry.rating < 0){
+            }else if(data.rating > 9.99 || data.rating < 0){
                 check.rating = false
             }
         }
     }
-    
+        check_data(querry);
 
-        let querry = req.query;
-        check_data(querry)
-        console.log(check)
         if (Object.values(check).indexOf(false) > -1) {
             let error = Object.keys(check).find(key => check[key] === false)
             res.send({
@@ -188,11 +223,7 @@ router.patch('/movies/update/:id', function (req, res){
                 error:true,
                 message:"invalid " + error + " Input",
             })
-        }
-    if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating') ){
-        if((querry).hasOwnProperty('title') && querry.title != undefined && querry.title != ""){
-           // movies[movies.indexOf(...mov)]["title"] = querry.title;
-
+        }else {
            movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
             movie.find({}).then(function(allmovies){
                 res.send({
@@ -205,45 +236,8 @@ router.patch('/movies/update/:id', function (req, res){
             error:true,
             message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck1"'
      })});
-        }
-        else if((querry).hasOwnProperty('year') && querry.year != undefined && Number.isInteger(Number(querry.year)) && (querry.year).length == 4 ){
-           // movies[movies.indexOf(...mov)]["year"] = Number(querry.year);
-            movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
-                movie.find({}).then(function(allmovies){
-                    res.send({
-                        status:200,
-                        movies_list : allmovies
-                    })
-                })
-               }).catch((err) => {res.send({
-                status:404,
-                error:true,
-                message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck2"'
-         })});
-        }
-        else if((querry).hasOwnProperty('rating') && querry.rating != undefined && querry.rating < 9.99 && querry.rating > 0 ){
-           // movies[movies.indexOf(...mov)]["rating"] = Number(Number((querry.rating)).toFixed(1));
-            movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
-                movie.find({}).then(function(allmovies){
-                    res.send({
-                        status:200,
-                        movies_list : allmovies
-                    })
-                })
-           }).catch((err) => {res.send({
-            status:404,
-            error:err,
-            message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck3"'
-     })});
-
-        }
-        }else{
-            res.send({
-                status:404,
-                error:true,
-                message:"invalid Input",
-            })
-        }
+        
+    }
 
     });
 
