@@ -192,8 +192,8 @@ router.patch('/movies/update/:id', function (req, res){
     if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating') ){
         if((querry).hasOwnProperty('title') && querry.title != undefined && querry.title != ""){
            // movies[movies.indexOf(...mov)]["title"] = querry.title;
-           let change = {"title": querry.title}
-           movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+
+           movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
             movie.find({}).then(function(allmovies){
                 res.send({
                     status:200,
@@ -208,8 +208,7 @@ router.patch('/movies/update/:id', function (req, res){
         }
         else if((querry).hasOwnProperty('year') && querry.year != undefined && Number.isInteger(Number(querry.year)) && (querry.year).length == 4 ){
            // movies[movies.indexOf(...mov)]["year"] = Number(querry.year);
-           let change = {"year": querry.year}
-            movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+            movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
                 movie.find({}).then(function(allmovies){
                     res.send({
                         status:200,
@@ -224,8 +223,7 @@ router.patch('/movies/update/:id', function (req, res){
         }
         else if((querry).hasOwnProperty('rating') && querry.rating != undefined && querry.rating < 9.99 && querry.rating > 0 ){
            // movies[movies.indexOf(...mov)]["rating"] = Number(Number((querry.rating)).toFixed(1));
-           let change = {"rating": Number(querry.rating)}
-            movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+            movie.findOneAndUpdate({_id: req.params.id}, querry).then(function(){
                 movie.find({}).then(function(allmovies){
                     res.send({
                         status:200,
