@@ -1,5 +1,7 @@
+const { query } = require('express');
 const express = require('express');
 const router = express.Router();
+const movie = require('../movies_database')
 
 const movies = [
     { id: 1, title: 'Jaws', year: 1975, rating: 8 },
@@ -74,7 +76,6 @@ router.get('/movies/read/id/:id', function (req, res){
 * adding example localhost:3001/movies/add/?title=batata&year=2100&rating=9
 */
 router.post('/movies/add', function (req, res){
-  
       if (!(req.query).hasOwnProperty('title') || !(req.query).hasOwnProperty('year')
       || !Number.isInteger(Number(req.query.year)) || (req.query.year).length != 4 ) {
             res.send({
@@ -83,19 +84,30 @@ router.post('/movies/add', function (req, res){
                 message:"you cannot create a movie without providing a title and a year'"
                 });
       }else if (req.query.rating == undefined || req.query.rating > 9.9 ){
-          movies.push({id:movies.length+1, title: req.query.title, year: req.query.year, rating: 4})
-          res.send({
-              status:200,
-              message: movies
+          let newmovie = { title: req.query.title, year: req.query.year, rating: 4}
+          movie.create(newmovie).then(function(add_movie){
+            movie.find({}).then(function(allmovies){
+                res.send({
+                    status:200,
+                    added_movie: add_movie,
+                    movies_list : allmovies
+                })
+            })
           })
-      }else {
-        movies.push({id:movies.length+1, title: req.query.title, year: req.query.year, rating: Number(Number((req.query.rating)).toFixed(1))})
-        res.send({
-            status:200,
-            message: movies
-        })
-      }
 
+      }else {
+        let newmovie = {title: req.query.title, year: req.query.year, rating: Number(Number((req.query.rating)).toFixed(1))}
+          movie.create(newmovie).then(function(add_movie){
+            movie.find({}).then(function(allmovies){
+                res.send({
+                    status:200,
+                    added_movie: add_movie,
+                    movies_list : allmovies
+                })
+            })
+          })
+      }
+      
      });
 /*
 * delete error handling example localhost:3001/movies/delete/
@@ -111,22 +123,20 @@ router.delete('/movies/delete', function (req, res){
 * delete example localhost:3001/movies/delete/1
 */
 router.delete('/movies/delete/:id', function (req, res){
-    let mov = movies.filter(item => Object.values(item).indexOf(Number(req.params.id)) == 0);
-    
-    if(mov.length != 0){
-        movies.splice((movies.indexOf(...mov)), 1)
-        res.send({
-            status:200,
-            message: movies
-        });
-        
-    }else{
-        res.send({
-            status:404,
-            error:true,
-            message:"the movie with id " + req.params.id + " does not exist"
-        })
-    }
+       movie.findByIdAndRemove({_id: req.params.id}).then(function(deleted){
+           movie.find({}).then(function(allmovies){
+               res.send({
+                   status:200,
+                   deleted_movie: deleted,
+                   movies_list : allmovies
+               })
+           }).catch(res.send({
+                    status:404,
+                    error:true,
+                    message:"the movie with id "+ req.params.id + " does not exist"
+                }))
+       })
+
 
     });
 /*
@@ -142,44 +152,100 @@ router.put('/movies/update', function (req, res){
 /*
 * update example localhost:3001/movies/update/1/?title=blabla&year=2000
 */
-router.put('/movies/update/:id', function (req, res){
-    let mov = movies.filter(item => Object.values(item).indexOf(Number(req.params.id)) == 0);
-    //console.log(movies[movies.indexOf(...mov)]);
-    let querry = req.query
-    console.log(querry)
-        if(mov.length == 0 || querry.length == 0){
-            res.send({
-                status:404,
-                error:true,
-                message:'hal seesan "cluck" "cluck" sho 7elween "cluck" "cluck"'
-            })
+router.patch('/movies/update/:id', function (req, res){
+    let check = {};
+
+    function check_data(data){
+        if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating')){
+            if((querry).hasOwnProperty('title') && querry.title != ""){
+                check.title = true
+            }else if(querry.title == ""){
+                check.title = false
+            }else {
+                delete check.title
+            }
+            if ((querry).hasOwnProperty('year') && Number.isInteger(Number(querry.year)) && (querry.year).length == 4){
+                check.year = true
+            }else if((querry.year).length != 4){
+                check.year = false
+            }
+            if((querry).hasOwnProperty('rating') && querry.rating < 9.99 && querry.rating > 0){
+                check.rating = true
+            }else if(querry.rating > 9.99 || querry.rating < 0){
+                check.rating = false
+            }
         }
-        else if((querry).hasOwnProperty('title') && querry.title != undefined && querry.title != ""){
-            movies[movies.indexOf(...mov)]["title"] = querry.title;
-            res.send({
-                status:200,
-                data: movies
-            });
-        }else if((querry).hasOwnProperty('year') && querry.year != undefined && Number.isInteger(Number(querry.year)) && (querry.year).length == 4 ){
-            movies[movies.indexOf(...mov)]["year"] = Number(querry.year);
-            res.send({
-                status:200,
-                data: movies
-            });
-        }else if((querry).hasOwnProperty('rating') && querry.rating != undefined && querry.rating < 9.99 && querry.rating > 0 ){
-            movies[movies.indexOf(...mov)]["rating"] = Number(Number((querry.rating)).toFixed(1));
-            res.send({
-                status:200,
-                data: movies
-            });
-        }else {
-            res.send({
-                status:404,
-                error:true,
-                message:"Cannot Update without without proper values",
-            })
-        }
+    }
     
+
+        let querry = req.query;
+        check_data(querry)
+        console.log(check)
+        if (Object.values(check).indexOf(false) > -1) {
+            console.log("err")
+            res.send({
+                status:404,
+                error:true,
+                message:"invalid Input",
+            })
+        }
+    if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating') ){
+        if((querry).hasOwnProperty('title') && querry.title != undefined && querry.title != ""){
+           // movies[movies.indexOf(...mov)]["title"] = querry.title;
+           let change = {"title": querry.title}
+           movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+            movie.find({}).then(function(allmovies){
+                res.send({
+                    status:200,
+                    movies_list : allmovies
+                })
+            });
+           }).catch((err) => {res.send({
+            status:404,
+            error:true,
+            message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck1"'
+     })});
+        }
+        else if((querry).hasOwnProperty('year') && querry.year != undefined && Number.isInteger(Number(querry.year)) && (querry.year).length == 4 ){
+           // movies[movies.indexOf(...mov)]["year"] = Number(querry.year);
+           let change = {"year": querry.year}
+            movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+                movie.find({}).then(function(allmovies){
+                    res.send({
+                        status:200,
+                        movies_list : allmovies
+                    })
+                })
+               }).catch((err) => {res.send({
+                status:404,
+                error:true,
+                message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck2"'
+         })});
+        }
+        else if((querry).hasOwnProperty('rating') && querry.rating != undefined && querry.rating < 9.99 && querry.rating > 0 ){
+           // movies[movies.indexOf(...mov)]["rating"] = Number(Number((querry.rating)).toFixed(1));
+           let change = {"rating": Number(querry.rating)}
+            movie.findOneAndUpdate({_id: req.params.id}, change).then(function(){
+                movie.find({}).then(function(allmovies){
+                    res.send({
+                        status:200,
+                        movies_list : allmovies
+                    })
+                })
+           }).catch((err) => {res.send({
+            status:404,
+            error:err,
+            message:'hal seesan "cluck" "cluck" wrong id "cluck" "cluck3"'
+     })});
+
+        }
+        }else{
+            res.send({
+                status:404,
+                error:true,
+                message:"invalid Input",
+            })
+        }
 
     });
 
