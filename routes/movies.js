@@ -166,7 +166,7 @@ router.patch('/movies/update/:id', function (req, res){
             }
             if ((querry).hasOwnProperty('year') && Number.isInteger(Number(querry.year)) && (querry.year).length == 4){
                 check.year = true
-            }else if((querry.year).length != 4){
+            }else if((querry).hasOwnProperty('year') && (querry.year).length != 4){
                 check.year = false
             }
             if((querry).hasOwnProperty('rating') && querry.rating < 9.99 && querry.rating > 0){
@@ -182,11 +182,11 @@ router.patch('/movies/update/:id', function (req, res){
         check_data(querry)
         console.log(check)
         if (Object.values(check).indexOf(false) > -1) {
-            console.log("err")
+            let error = Object.keys(check).find(key => check[key] === false)
             res.send({
                 status:404,
                 error:true,
-                message:"invalid Input",
+                message:"invalid " + error + " Input",
             })
         }
     if((querry).hasOwnProperty('title') || (querry).hasOwnProperty('year') || (querry).hasOwnProperty('rating') ){
