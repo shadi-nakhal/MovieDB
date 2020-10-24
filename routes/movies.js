@@ -1,10 +1,33 @@
-const { query } = require('express');
+
 const express = require('express');
 const router = express.Router();
 const movie = require('../movies_database');
-const { checkout } = require('./fun_stuff');
+const bcrypt = require('bcrypt');
+const user_router = require('./user');
 
-        
+router.use(user_router);
+router.use(express.json());
+
+
+//    const authorize = (req, res, next )=> {
+//     const user = users.find(user => user.username === req.body.username)
+//     console.log(user);
+//     if (user == null) {
+//     return res.status(400).send('Cannot find user')
+//     }
+//     try {
+//     if(await bcrypt.compare(req.body.password, user.password)) {
+//         res.send('logged in');
+//         next()
+//     } else {
+//         res.send('access denied')
+//     }
+//     } catch (error){
+//     res.status(500).send(error)
+//     }
+// }
+
+
 router.get('/movies/read', function (req, res){
     movie.find({}).sort({title: 1}).exec(function(err, mov) {
         res.send({
@@ -59,6 +82,7 @@ router.get('/movies/read/id/:id', function (req, res){
             status:200,
             data:mov
         })
+        console.log(users)
     }).catch((err) => res.send({
         status:404,
         error:true,
@@ -70,7 +94,7 @@ router.get('/movies/read/id/:id', function (req, res){
 /*
 * adding example localhost:3001/movies/add/?title=batata&year=2100&rating=9
 */
-router.post('/movies/add', function (req, res){
+router.post('/movies/add' ,  function (req, res){
     let querry = req.query; 
     let check = {};
 
@@ -240,6 +264,9 @@ router.put('/movies/update/:id', function (req, res){
     }
 
     });
+
+    
+
 
 
 module.exports = router;
