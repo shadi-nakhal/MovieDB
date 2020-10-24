@@ -1,13 +1,14 @@
 const express = require('express');
 const auth = express.Router();
 const bcrypt = require('bcrypt');
+var users = require('./users')
 
+// global.users;
 
 auth.use(express.json())
 
 
-var users = []
-
+console.log(users)
 /*
 * shows all users
 */
@@ -19,6 +20,7 @@ auth.get('/users', (req, res) => {
 * creates a user by sending {username:blabla password:123} in json in body
 */
   auth.post('/users', async (req, res) => {
+      console.log(users)
     try {
       const hashedPassword = await bcrypt.hash(req.body.password, 10)
       const user = { id: users.length + 1, username: req.body.username, password: hashedPassword }

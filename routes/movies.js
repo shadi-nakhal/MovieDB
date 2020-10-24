@@ -4,28 +4,31 @@ const router = express.Router();
 const movie = require('../movies_database');
 const bcrypt = require('bcrypt');
 const user_router = require('./user');
+var users = require('./users')
+
+
 
 router.use(user_router);
 router.use(express.json());
 
-
-//    const authorize = (req, res, next )=> {
-//     const user = users.find(user => user.username === req.body.username)
-//     console.log(user);
-//     if (user == null) {
-//     return res.status(400).send('Cannot find user')
-//     }
-//     try {
-//     if(await bcrypt.compare(req.body.password, user.password)) {
-//         res.send('logged in');
-//         next()
-//     } else {
-//         res.send('access denied')
-//     }
-//     } catch (error){
-//     res.status(500).send(error)
-//     }
-// }
+/*
+* middleware function for authentication
+*/
+   const authorize = async (req, res, next )=> {
+    const user = users.find(user => user.username === req.body.username)
+    if (user == null) {
+    return res.status(400).send('Cannot find user')
+    }
+    try {
+    if(await bcrypt.compare(req.body.password, user.password)) {
+        next()
+    } else {
+        res.send('access denied')
+    }
+    } catch (error){
+    res.status(500).send(error)
+    }
+}
 
 
 router.get('/movies/read', function (req, res){
@@ -82,7 +85,6 @@ router.get('/movies/read/id/:id', function (req, res){
             status:200,
             data:mov
         })
-        console.log(users)
     }).catch((err) => res.send({
         status:404,
         error:true,
@@ -94,7 +96,7 @@ router.get('/movies/read/id/:id', function (req, res){
 /*
 * adding example localhost:3001/movies/add/?title=batata&year=2100&rating=9
 */
-router.post('/movies/add' ,  function (req, res){
+router.post('/movies/add', authorize ,  function (req, res){
     let querry = req.query; 
     let check = {};
 
@@ -169,7 +171,7 @@ router.post('/movies/add' ,  function (req, res){
 /*
 * delete error handling example localhost:3001/movies/delete/
 */
-router.delete('/movies/delete', function (req, res){
+router.delete('/movies/delete', authorize , function (req, res){
     res.send({
         status:404,
         error:true,
@@ -179,7 +181,7 @@ router.delete('/movies/delete', function (req, res){
 /*
 * delete example localhost:3001/movies/delete/1
 */
-router.delete('/movies/delete/:id', function (req, res){
+router.delete('/movies/delete/:id', authorize ,  function (req, res){
        movie.findByIdAndRemove({_id: req.params.id}).then(function(){
            movie.find({}).then(function(allmovies){
                res.send({
@@ -203,7 +205,7 @@ router.delete('/movies/delete/:id', function (req, res){
 /*
 * update error handling example localhost:3001/movies/update/
 */
-router.put('/movies/update', function (req, res){
+router.put('/movies/update', authorize , function (req, res){
     res.send({
         status:404,
         error:true,
@@ -213,7 +215,7 @@ router.put('/movies/update', function (req, res){
 /*
 * update example localhost:3001/movies/update/1/?title=blabla&year=2000
 */
-router.put('/movies/update/:id', function (req, res){
+router.put('/movies/update/:id', authorize , function (req, res){
     let check = {};
     let querry = req.query;
 
